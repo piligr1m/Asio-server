@@ -44,8 +44,8 @@ target_include_directories(main
 hunter_add_package(Boost COMPONENTS system thread)
 find_package(Boost CONFIG REQUIRED system thread)
 
-hunter_add_package(Boost COMPONENTS asystem bind)
-find_package(Boost CONFIG REQUIRED asystem bind)
+hunter_add_package(Boost COMPONENTS system bind.hpp)
+find_package(Boost CONFIG REQUIRED system bind.hpp)
 
 hunter_add_package(Boost COMPONENTS system asio)
 find_package(Boost CONFIG REQUIRED system asio)
@@ -57,7 +57,7 @@ hunter_add_package(Boost COMPONENTS system enable_shared_from_this)
 find_package(Boost CONFIG REQUIRED system enable_shared_from_this)
 
 target_link_libraries(main Boost::thread)
-target_link_libraries(main Boost::bind)
+target_link_libraries(main Boost::bind.hpp)
 target_link_libraries(main Boost::asio)
 target_link_libraries(main Boost::shared_ptr)
 target_link_libraries(main Boost::enable_shared_from_this)
