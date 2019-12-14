@@ -20,7 +20,7 @@ HunterGate(
 )
 
 
-project(boost_filesystem)
+project(boost_server)
 string(APPEND CMAKE_CXX_FLAGS " -pedantic -Werror -Wall -Wextra")
 string(APPEND CMAKE_CXX_FLAGS " -Wno-unused-command-line-argument")
 string(APPEND CMAKE_CXX_FLAGS " -Wshadow -Wnon-virtual-dtor")
@@ -33,31 +33,16 @@ add_executable(main
 )
 
 
-target_include_directories(main
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+
+find_package(Boost COMPONENTS thread bind asio shared_ptr enable_shared_from_this REQUIRED)
 
 
 
 
 
-hunter_add_package(Boost COMPONENTS system thread)
-find_package(Boost CONFIG REQUIRED system thread)
-
-hunter_add_package(Boost COMPONENTS system bind)
-find_package(Boost CONFIG REQUIRED system bind)
-
-hunter_add_package(Boost COMPONENTS system asio)
-find_package(Boost CONFIG REQUIRED system asio)
-
-hunter_add_package(Boost COMPONENTS system shared_ptr)
-find_package(Boost CONFIG REQUIRED system shared_ptr)
-
-hunter_add_package(Boost COMPONENTS system enable_shared_from_this)
-find_package(Boost CONFIG REQUIRED system enable_shared_from_this)
 
 target_link_libraries(main Boost::thread)
-target_link_libraries(main Boost::bind.hpp)
+target_link_libraries(main Boost::bind)
 target_link_libraries(main Boost::asio)
 target_link_libraries(main Boost::shared_ptr)
 target_link_libraries(main Boost::enable_shared_from_this)
