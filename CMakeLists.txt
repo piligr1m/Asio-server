@@ -44,8 +44,8 @@ target_include_directories(main
 hunter_add_package(Boost COMPONENTS system thread)
 find_package(Boost CONFIG REQUIRED system thread)
 
-hunter_add_package(Boost COMPONENTS system bind.hpp)
-find_package(Boost CONFIG REQUIRED system bind.hpp)
+hunter_add_package(Boost COMPONENTS system bind)
+find_package(Boost CONFIG REQUIRED system bind)
 
 hunter_add_package(Boost COMPONENTS system asio)
 find_package(Boost CONFIG REQUIRED system asio)
