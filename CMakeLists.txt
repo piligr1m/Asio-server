@@ -33,8 +33,9 @@ add_executable(main
 )
 
 
+hunter_add_package(Boost COMPONENTS system thread)
+find_package(Boost CONFIG REQUIRED system thread)
 
-find_package(Boost COMPONENTS thread bind asio shared_ptr enable_shared_from_this REQUIRED)
 
 
 
@@ -42,10 +43,7 @@ find_package(Boost COMPONENTS thread bind asio shared_ptr enable_shared_from_thi
 
 
 target_link_libraries(main Boost::thread)
-target_link_libraries(main Boost::bind)
-target_link_libraries(main Boost::asio)
-target_link_libraries(main Boost::shared_ptr)
-target_link_libraries(main Boost::enable_shared_from_this)
+
 
 enable_testing()
 add_test(NAME unit_tests COMMAND tests) 
