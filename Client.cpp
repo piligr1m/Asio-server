@@ -1,10 +1,4 @@
-//
-//  Client.cpp
-//  Sync Server
-//
-//  Created by Stanislav Martynov on 16.12.2019.
-//  Copyright © 2019 Stanislav Martynov. All rights reserved.
-//
+
 
 #include <stdio.h>
 #include <iostream>
