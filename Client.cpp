@@ -108,7 +108,7 @@ void run_client(const std::string & client_name) {
 
 int main(int argc, char* argv[]) {
     boost::thread_group threads;
-    char* names[] = { "John", "James", "Lucy", "Tracy", "Frank", "Abby", 0 };
+
     for ( char ** name = names; *name; ++name) {
         threads.create_thread( boost::bind(run_client, *name));
         boost::this_thread::sleep( boost::posix_time::millisec(100));
