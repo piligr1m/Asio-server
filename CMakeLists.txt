@@ -28,6 +28,7 @@ find_package(GTest CONFIG REQUIRED)
 
 add_executable(main
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Client.cpp
 )
 
 
