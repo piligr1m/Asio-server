@@ -1,109 +1,86 @@
-
-
-#include <stdio.h>
-#include <iostream>
-#include <boost/thread.hpp>
-#include <boost/bind.hpp>
+#include <stdlib.h>
 #include <boost/asio.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-using namespace boost::asio;
-io_service service;
-
-struct talk_to_svr {
-    talk_to_svr(const std::string & username)
-        : sock_(service), started_(true), username_(username) {}
-    void connect(ip::tcp::endpoint ep) {
-        sock_.connect(ep);
-    }
-    void loop() {
-        // read answer to our login
-        write("login " + username_ + "\n");
-        read_answer();
-        while ( started_) {
-            write_request();
-            read_answer();
-            int millis = rand() % 7000;
-            std::cout << username_ << " postpone ping "
-                      << millis << " ms" << std::endl;
-            boost::this_thread::sleep(boost::posix_time::millisec(millis));
-        }
-    }
-    std::string username() const { return username_; }
-private:
-    void write_request() {
-        write("ping\n");
-    }
-    void read_answer() {
-        already_read_ = 0;
-        read(sock_, buffer(buff_),
-             boost::bind(&talk_to_svr::read_complete, this, _1, _2));
-        process_msg();
-    }
-    void process_msg() {
-        std::string msg(buff_, already_read_);
-        if ( msg.find("login ") == 0) on_login();
-        else if ( msg.find("ping") == 0) on_ping(msg);
-        else if ( msg.find("clients ") == 0) on_clients(msg);
-        else std::cerr << "invalid msg " << msg << std::endl;
-    }
-
-    void on_login() {
-        std::cout << username_ << " logged in" << std::endl;
-        do_ask_clients();
-    }
-    void on_ping(const std::string & msg) {
-        std::istringstream in(msg);
-        std::string answer;
-        in >> answer >> answer;
-        if ( answer == "client_list_changed")
-            do_ask_clients();
-    }
-    void on_clients(const std::string & msg) {
-        std::string clients = msg.substr(8);
-        std::cout << username_ << ", new client list:" << clients;
-    }
-    void do_ask_clients() {
-        write("ask_clients\n");
-        read_answer();
-    }
-
-    void write(const std::string & msg) {
-        sock_.write_some(buffer(msg));
-    }
-    size_t read_complete(const boost::system::error_code & err, size_t bytes) {
-        if ( err) return 0;
-        already_read_ = bytes;
-        bool found = std::find(buff_, buff_ + bytes, '\n') < buff_ + bytes;
-        // we read one-by-one until we get to enter, no buffering
-        return found ? 0 : 1;
-    }
-
-private:
-    ip::tcp::socket sock_;
-    enum { max_msg = 1024 };
-    int already_read_;
-    char buff_[max_msg];
-    bool started_;
-    std::string username_;
-};
-
-ip::tcp::endpoint ep( ip::address::from_string("127.0.0.1"), 8001);
-void run_client(const std::string & client_name) {
-    talk_to_svr client(client_name);
-    try {
-        client.connect(ep);
-        client.loop();
-    } catch(boost::system::system_error & err) {
-        std::cout << "client terminated " << client.username()
-                  << ": " << err.what() << std::endl;
-    }
+#include <boost/array.hpp>
+#include <thread>
+#include <chrono>
+#include <iostream>
+using namespace boost;
+using namespace std;
+void writeToSocket(asio::ip::tcp::socket& sock, std::string& buf) {  // Запись данных в сокет
+	std::size_t total_bytes_written = 0;
+	while (total_bytes_written != buf.length()) {
+		total_bytes_written += sock.write_some(
+			asio::buffer(buf.c_str() +
+			total_bytes_written,
+			buf.length() - total_bytes_written));
+	}
 }
 
-int main(int argc, char* argv[]) {
-    boost::thread_group threads;
+bool flag = true; // Флаг работы клиента
 
+// Потоковая функция клиент
+void ClientThread(string clientName) // Параметр функции - имя клиента
+{
+	std::string raw_ip_address = "127.0.0.1"; // Адрес сервера - локальеный компьютер (localhost)
+	unsigned short port_num = 3333; // Номер порта
+	asio::ip::tcp::endpoint ep(asio::ip::address::from_string(raw_ip_address),	port_num); // Создаем точку доступа
+	asio::io_service ios;
+	asio::ip::tcp::socket sock(ios, ep.protocol()); // Создаем сокет клиента
+	sock.connect(ep); // подключение сокета к точке доступа
 
-    
-    threads.join_all();
+	// Отправляем данные серверу
+	string strToServ = clientName;  // Первый раз отправляем имя клиент
+	cout << "To server: " << strToServ << endl; // Печать данных отправляемых на сервер
+	writeToSocket(sock, strToServ); // Отвправка - запись в сокет
+	// Получаем ответ сервера
+	boost::array<char, 256> buf; // Буфер для приема сообщения от сервера
+	boost::system::error_code error; // Суда записываем код ошибки (не используем)
+	size_t len = sock.read_some(boost::asio::buffer(buf), error); // Читаем данные от сервера
+	buf[len] = 0; // Строка заканчивается 0
+	cout  << "From server: " << buf.data(); // Печать данных от сервера
+	while (flag) // В цикле посылаем запрос, получаем ответ
+	{
+		switch (rand() % 3 + 1) // Случайно выбирает тип запроса
+		{
+		case 1:	strToServ = "ping\n"; break;
+		case 2:	strToServ = "clients\n"; break;
+		case 3:	strToServ = "Hernауауцya\n"; break;
+		}
+		cout << "To server: " << strToServ ; // Печать данных отправляемых на сервер
+		writeToSocket(sock, strToServ); // Отвправка - запись в сокет
+		// Получаем ответ сервера
+		size_t len = sock.read_some(boost::asio::buffer(buf), error); // Читаем данные от сервера
+		if (len == 0) break;
+		buf[len] = 0; // Строка заканчивается 0
+		cout << "From server: " << buf.data() ; // Печать данных от сервера
+		this_thread::sleep_for(chrono::seconds(1)); // Задержка 1 сек
+	}
+	cout << "Client: " << clientName << " stop" << endl;
+	// Завершение приема передачи, закрытие сокета
+	sock.shutdown(asio::socket_base::shutdown_send);
+	// Close socket (is done by dtor)
+	sock.close();
+	
+}
+
+// Приложение клиент
+void main()
+{
+	
+	// Создаем потоки динамически
+	cout << "For start thread, press Enter!\n";
+	cout << "For exit, press Enter!\n";
+	cin.get(); // Ждем нажатия Enter
+	thread t1(ClientThread, "MyClient145");
+	cout << "Thread1 Start Ok!!!!!\n";
+	this_thread::sleep_for(chrono::seconds(5)); // Задерка 5 сек
+	thread t2(ClientThread, "FghghhhMyClient");
+	cout << "Thread2 Start Ok!!!!!\n";
+	cin.get(); // Ждем нажатия Enter
+	flag = false; // завершение потоки
+	t1.join();
+	t2.join();
+	cout << "Client is end!\n";
+	::system("pause");
+
 }
