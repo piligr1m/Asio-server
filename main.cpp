@@ -1,155 +1,151 @@
 
-//
-//  main.cpp
-//  Sync Server
-//
-//  Created by Stanislav Martynov on 14.12.2019.
-//  Copyright © 2019 Stanislav Martynov. All rights reserved.
-//
-
-#include <boost/thread.hpp>
-#include <boost/bind.hpp>
 #include <boost/asio.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/array.hpp>
+
+#include <memory>
+#include <thread>
+#include <chrono>
+#include <mutex>
+#include <algorithm>
 #include <iostream>
+using namespace boost;
 using namespace boost::asio;
-using namespace boost::posix_time;
-io_service service;
+using namespace std::chrono;
+using namespace std;
+using ip::tcp;
 
+std::mutex mut;
 struct talk_to_client;
-typedef boost::shared_ptr<talk_to_client> client_ptr;
-typedef std::vector<client_ptr> array;
-array clients;
-// thread-safe access to clients array
-boost::recursive_mutex cs;
+extern std::vector <talk_to_client*> clients;
 
-void update_clients_changed() ;
+struct talk_to_client
+{
+	talk_to_client(asio::io_service& ios) {
+		sock_ = new ip::tcp::socket(ios);
+		timeout = false;
+	}
 
-struct talk_to_client : boost::enable_shared_from_this<talk_to_client> {
-    talk_to_client()
-        : sock_(service), started_(false), already_read_(0) {
-        last_ping = microsec_clock::local_time();
-    }
-    std::string username() const { return username_; }
 
-    void answer_to_client() {
-        try {
-            read_request();
-            process_request();
-        } catch ( boost::system::system_error&) {
-            stop();
-        }
-        if ( timed_out()) {
-            stop();
-            std::cout << "stopping " << username_ << " - no ping in time" << std::endl;
-        }
-    }
-    void set_clients_changed() { clients_changed_ = true; }
-    ip::tcp::socket & sock() { return sock_; }
-    bool timed_out() const {
-        ptime now = microsec_clock::local_time();
-        long long ms = (now - last_ping).total_milliseconds();
-        return ms > 5000 ;
-    }
-    void stop() {
-        // close client connection
-        boost::system::error_code err;
-        sock_.close(err);
-    }
+	ip::tcp::socket& sock() { return *sock_; }
+	bool timed_out() const
+	{
+		return timeout;
+	}
+	void stop()
+	{
+
+		sock_->shutdown(asio::socket_base::shutdown_send);
+		boost::system::error_code err; sock_->close(err);
+	}
+
+	void writeToSocket(std::string& buf) {
+		std::size_t total_bytes_written = 0;
+		while (total_bytes_written != buf.length()) {
+			total_bytes_written += sock_->write_some(
+				asio::buffer(buf.c_str() +
+					total_bytes_written,
+					buf.length() - total_bytes_written));
+		}
+	}
+
+	bool flagFirst = true;
+	void readToWrite()
+	{
+		if (flagFirst) cout << endl << "Client connected!\n";
+		boost::array<char, 256> buf;
+		boost::system::error_code error;
+		size_t len = sock_->read_some(boost::asio::buffer(buf), error);
+		buf[len] = 0;
+		bool flagNotClient = false;
+		if (buf.data() == nullptr) flagNotClient = true;
+		if (!flagNotClient) if (strcmp(buf.data(), "") == 0) flagNotClient = true;
+		if (flagNotClient)
+		{
+			system_clock::time_point end = std::chrono::system_clock::now();
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(end - now).count() >= 5000) {
+
+				stop();
+				delete sock_;
+				timeout = true;
+			}
+			return;
+		}
+		now = std::chrono::system_clock::now();
+		cout << "From client: " << buf.data();
+		string strToClient = "";
+		if (flagFirst)
+		{
+			username_ = buf.data();
+			strToClient = "login_ok\n";
+			flagFirst = false;
+		}
+		else {
+			string fromClient = buf.data();
+			if (fromClient == "ping\n") strToClient = "ping_ok\n";
+			else
+				if (fromClient == "clients\n")
+				{
+
+					for (auto pos : clients)
+						strToClient += pos->username_ + " ";
+					strToClient += "\n";
+
+				}
+				else strToClient = "Unknown format\n";
+
+		}
+		cout << "To client: " << strToClient;
+		writeToSocket(strToClient);
+
+	}
+
+
 private:
-    void read_request() {
-        if ( sock_.available())
-            already_read_ += sock_.read_some(
-                buffer(buff_ + already_read_, max_msg - already_read_));
-    }
-    void process_request() {
-        bool found_enter = std::find(buff_, buff_ + already_read_, '\n')
-                          < buff_ + already_read_;
-        if ( !found_enter)
-            return; // message is not full
-        // process the msg
-        last_ping = microsec_clock::local_time();
-        size_t pos = std::find(buff_, buff_ + already_read_, '\n') - buff_;
-        std::string msg(buff_, pos);
-        std::copy(buff_ + already_read_, buff_ + max_msg, buff_);
-        already_read_ -= pos + 1;
 
-        if ( msg.find("login ") == 0) on_login(msg);
-        else if ( msg.find("ping") == 0) on_ping();
-        else if ( msg.find("ask_clients") == 0) on_clients();
-        else std::cerr << "invalid msg " << msg << std::endl;
-    }
-    
-    void on_login(const std::string & msg) {
-        std::istringstream in(msg);
-        in >> username_ >> username_;
-        std::cout << username_ << " logged in" << std::endl;
-        write("login ok\n");
-        update_clients_changed();
-    }
-    void on_ping() {
-        write(clients_changed_ ? "ping client_list_changed\n" : "ping ok\n");
-        clients_changed_ = false;
-    }
-    void on_clients() {
-        std::string msg;
-        { boost::recursive_mutex::scoped_lock lk(cs);
-          for( array::const_iterator b = clients.begin(), e = clients.end() ; b != e; ++b)
-            msg += (*b)->username() + " ";
-        }
-        write("clients " + msg + "\n");
-    }
+	ip::tcp::socket* sock_;
+	bool timeout;
+	std::string username_;
+	system_clock::time_point now;
 
 
-    void write(const std::string & msg) {
-        sock_.write_some(buffer(msg));
-    }
-private:
-    ip::tcp::socket sock_;
-    enum { max_msg = 1024 };
-    int already_read_;
-    char buff_[max_msg];
-    bool started_;
-    std::string username_;
-    bool clients_changed_;
-    ptime last_ping;
 };
 
-void update_clients_changed() {
-    boost::recursive_mutex::scoped_lock lk(cs);
-    for( array::iterator b = clients.begin(), e = clients.end(); b != e; ++b)
-        (*b)->set_clients_changed();
+std::vector <talk_to_client*> clients;
+
+bool predicatTimeOut(talk_to_client* pCl)
+{
+	return pCl->timed_out();
 }
 
-
-
 void accept_thread() {
-    ip::tcp::acceptor acceptor(service, ip::tcp::endpoint(ip::tcp::v4(), 8001));
-    while ( true) {
-        client_ptr new_( new talk_to_client);
-        acceptor.accept(new_->sock());
-        
-        boost::recursive_mutex::scoped_lock lk(cs);
-        clients.push_back(new_);
-    }
+	asio::io_service ios;
+	ip::tcp::acceptor acceptor(ios, ip::tcp::endpoint(ip::tcp::v4(), 3333));
+	while (true) {
+		talk_to_client* client = new talk_to_client(ios);
+		acceptor.accept(client->sock());
+		std::lock_guard <std::mutex> lock(mut);
+		clients.push_back(client);
+	}
 }
 
 void handle_clients_thread() {
-    while ( true) {
-        boost::this_thread::sleep( millisec(1));
-        boost::recursive_mutex::scoped_lock lk(cs);
-        for ( array::iterator b = clients.begin(), e = clients.end(); b != e; ++b)
-            (*b)->answer_to_client();
-        // erase clients that timed out
-        clients.erase(std::remove_if(clients.begin(), clients.end(),
-                   boost::bind(&talk_to_client::timed_out,_1)), clients.end());
-    }
-}
+	while (true)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	std::lock_guard <std::mutex> lock(mut);
+	for (auto& client : clients) {
+		client->readToWrite();
+	}
+	auto posDel = std::remove_if(clients.begin(), clients.end(), predicatTimeOut);
+	clients.erase(posDel, clients.end());
 
-int main(int argc, char* argv[]) {
-    boost::thread_group threads;
-    threads.create_thread(accept_thread);
-    threads.create_thread(handle_clients_thread);
-    threads.join_all();
+}
+}
+int main(int argc, char* argv[])
+{
+
+	thread t1(accept_thread);
+	thread t2(handle_clients_thread);
+	t1.join();
+	t2.join();
 }
