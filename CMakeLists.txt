@@ -29,9 +29,5 @@ add_executable(main
   ${CMAKE_CURRENT_SOURCE_DIR}Client.cpp)
 
 
-target_link_libraries(log Boost::log Boost::thread Boost::filesystem
-Boost::system)
-target_link_libraries(server log Boost::regex Boost::date_time Boost::thread
-Boost::system client)
-target_link_libraries(client log Boost::regex Boost::thread Boost::system)
+
 
