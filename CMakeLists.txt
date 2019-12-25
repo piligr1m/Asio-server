@@ -23,7 +23,7 @@ hunter_add_package(Boost COMPONENTS log thread filesystem system date_time regex
 find_package(Boost CONFIG REQUIRED log thread filesystem system date_time regex)
 
 
-)
+
 add_executable(main
   ${CMAKE_CURRENT_SOURCE_DIR}main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}Client.cpp)
