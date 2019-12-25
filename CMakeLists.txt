@@ -34,4 +34,4 @@ Boost::system)
 target_link_libraries(server log Boost::regex Boost::date_time Boost::thread
 Boost::system client)
 target_link_libraries(client log Boost::regex Boost::thread Boost::system)
-target_link_libraries(main server client)
+
