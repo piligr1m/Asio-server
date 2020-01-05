@@ -1,4 +1,3 @@
-
 cmake_minimum_required(VERSION 3.4)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -22,12 +21,32 @@ project(server)
 hunter_add_package(Boost COMPONENTS log thread filesystem system date_time regex)
 find_package(Boost CONFIG REQUIRED log thread filesystem system date_time regex)
 
-
-
+add_library(server STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/sources/Server.cpp
+)
+add_library(client STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/sources/Client.cpp
+)
+add_library(log STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/sources/log.cpp
+)
 add_executable(main
-  ${CMAKE_CURRENT_SOURCE_DIR}main.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}Client.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/sources/main.cpp)
 
+target_include_directories(server
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
+target_include_directories(client
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_include_directories(log
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
-
+target_link_libraries(log Boost::log Boost::thread Boost::filesystem
+Boost::system)
+target_link_libraries(server log Boost::regex Boost::date_time Boost::thread
+Boost::system client)
+target_link_libraries(client log Boost::regex Boost::thread Boost::system)
+target_link_libraries(main server client)
