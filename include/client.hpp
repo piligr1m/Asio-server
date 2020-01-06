@@ -1,10 +1,3 @@
-//
-//  client.hpp
-//  s
-//
-//  Created by Stanislav Martynov on 06.01.2020.
-//  Copyright © 2020 Stanislav Martynov. All rights reserved.
-//
 
 #pragma once
 
