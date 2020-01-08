@@ -75,7 +75,7 @@ void Server::workWithClient(std::shared_ptr<Client>& client) {
                     for (const auto& cl: this->clients_) {
                         std::string name = cl.get()->getUsername();
                         std::string connect;
-                        cl.get()->isTimeOut() ? connect = "list_chaned" :
+                        cl.get()->isTimeOut() ? connect = "list_changed" :
                                                 connect = "ping_ok";
                         std::string clientInfo = name + ": " + connect;
                         tellClient(client.get()->sock(), clientInfo);
