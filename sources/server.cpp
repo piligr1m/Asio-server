@@ -71,7 +71,7 @@ void Server::workWithClient(std::shared_ptr<Client>& client) {
                 sstream >> s_size;
                 tellClient(client.get()->sock(), s_size + '\n');
                 listenToClient(client.get()->sock(), message);
-                if (message == "ok") {
+                if (message == "ping") {
                     for (const auto& cl: this->clients_) {
                         std::string name = cl.get()->getUsername();
                         std::string connect;
@@ -86,7 +86,7 @@ void Server::workWithClient(std::shared_ptr<Client>& client) {
                 tellClient(client.get()->sock(), "1");
                 std::string message;
                 listenToClient(client.get()->sock(), message);
-                if (message == "ok") {
+                if (message == "ping") {
                     tellClient(client.get()->sock(), "ping_ok");
                 }
             }
