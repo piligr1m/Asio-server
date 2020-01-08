@@ -1,4 +1,3 @@
-
 #include "server.hpp"
 
 Server::Server() {
@@ -71,11 +70,11 @@ void Server::workWithClient(std::shared_ptr<Client>& client) {
                 sstream >> s_size;
                 tellClient(client.get()->sock(), s_size + '\n');
                 listenToClient(client.get()->sock(), message);
-                if (message == "ping") {
+                if (message == "ok") {
                     for (const auto& cl: this->clients_) {
                         std::string name = cl.get()->getUsername();
                         std::string connect;
-                        cl.get()->isTimeOut() ? connect = "list_changed" :
+                        cl.get()->isTimeOut() ? connect = "list_chaned" :
                                                 connect = "ping_ok";
                         std::string clientInfo = name + ": " + connect;
                         tellClient(client.get()->sock(), clientInfo);
@@ -86,7 +85,7 @@ void Server::workWithClient(std::shared_ptr<Client>& client) {
                 tellClient(client.get()->sock(), "1");
                 std::string message;
                 listenToClient(client.get()->sock(), message);
-                if (message == "ping") {
+                if (message == "ok") {
                     tellClient(client.get()->sock(), "ping_ok");
                 }
             }
@@ -111,3 +110,4 @@ void Server::listenToClient(ip::tcp::socket& socket, std::string& msg) {
     }
     this->service_.stop();
 }
+
