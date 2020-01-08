@@ -62,15 +62,7 @@ void Server::workWithClient(std::shared_ptr<Client>& client) {
         this->listenToClient(client.get()->sock(), command);
         if (!client.get()->isTimeOut()) {
             logInfoClientsMessage(command);
-            if (command "login"){
-                        std::shared_ptr<Client> client(new Client(0));
-        this->acceptor_.get()->accept(client.get()->sock());
-        std::string username;
-        this->loginClient(client.get()->sock(), username);
-        client.get()->setUsername(username);
-        logInfoClientsMessage(username);
-        this->tellClient(client.get()->sock(), "login_ok");
-ta            if (command == "list") {
+            if (command == "list") {
                 std::stringstream sstream;
                 std::string message;
                 std::string s_size;
